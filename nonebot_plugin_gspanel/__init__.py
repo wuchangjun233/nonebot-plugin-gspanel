@@ -102,12 +102,8 @@ async def x_x(bot: Bot, event: TextMessageEvent, args: Message = CommandArg()):
 
     raw_mes = args.extract_plain_text().strip()
     name = ''.join(re.findall('[\u4e00-\u9fa5]', raw_mes))
-    if not name:
-        return
     if "@" in raw_mes:
         raw_mes = raw_mes.split("@")[0]
-        if not raw_mes:
-            return
 
     wxid = event.from_wxid
     if event.at_user_list:
