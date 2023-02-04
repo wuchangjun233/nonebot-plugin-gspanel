@@ -2,18 +2,18 @@ import re
 from typing import Tuple
 
 from nonebot import get_driver
-from nonebot.log import logger
 from nonebot.adapters import Message
+from nonebot.adapters.ntchat import Bot
+from nonebot.adapters.ntchat.event import MessageEvent, TextMessageEvent
+from nonebot.adapters.ntchat.message import Message, MessageSegment
+from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot.plugin import on_command
-from nonebot.adapters.ntchat import Bot
-from GenshinUID.utils.db_operation.db_operation import select_db
-from nonebot.adapters.ntchat.message import Message, MessageSegment
-from nonebot.adapters.ntchat.event import MessageEvent, TextMessageEvent
 
+from ..GenshinUID.GenshinUID.utils.db_operation.db_operation import select_db
+from .__utils__ import GSPANEL_ALIAS, aliasWho, fetchInitRes, formatTeam
+from .data_source import getPanel, getTeam
 from .data_updater import updateCache
-from .data_source import getTeam, getPanel
-from .__utils__ import GSPANEL_ALIAS, aliasWho, formatTeam, fetchInitRes
 
 driver = get_driver()
 driver.on_startup(fetchInitRes)
@@ -53,7 +53,7 @@ async def formatInput(msg: str, wxid: str) -> Tuple[str, str]:
             tmp = s.lower()
         elif not s.isdigit() and not char:
             char = tmp + s
-    uid = uid or await select_db(wxid, mode='uid')
+    uid = uid
     char = await aliasWho(char or tmp or "全部")
     return uid, char
 
@@ -82,10 +82,11 @@ async def giveMePower(event: TextMessageEvent, args: Message = CommandArg()):
      # 尝试从输入中理解 UID、角色名
     uid, char = await formatInput(raw_mes, wxid)
 
-    if '未找到绑定的UID' in uid:
-        await showTeam.finish(MessageSegment.room_at_msg(content=f"要查询角色面板的 UID 捏？"+"{$@}", at_list=wxid_list))
-    elif not uid.isdigit() or uid[0] not in uidStart or len(uid) != 9:
-        await showPanel.finish(MessageSegment.room_at_msg(content=f"UID 是「{uid}」吗？好像不对劲呢.."+"{$@}", at_list=wxid_list))
+    if not uid.isdigit() or uid[0] not in uidStart or len(uid) != 9:
+        uid = await select_db(wxid, mode='uid')
+        if '未找到绑定的UID' in uid:
+            await showTeam.finish(MessageSegment.room_at_msg(content=f"要查询角色面板的 UID 捏？"+"{$@}", at_list=wxid_list))
+        #await showPanel.finish(MessageSegment.room_at_msg(content=f"UID 是「{uid}」吗？好像不对劲呢.."+"{$@}", at_list=wxid_list))
 
     logger.info(f"正在查找 UID{uid} 的「{char}」角色面板..")
     rt = await getPanel(uid, char)
@@ -115,10 +116,10 @@ async def x_x(bot: Bot, event: TextMessageEvent, args: Message = CommandArg()):
     # 尝试从输入中理解 UID、角色名
     uid, chars = await formatTeam(raw_mes, wxid)
 
-    if '未找到绑定的UID' in uid:
-        await showTeam.finish(MessageSegment.room_at_msg(content=f"要查询角色面板的 UID 捏？"+"{$@}", at_list=wxid_list))
-    elif not uid.isdigit() or uid[0] not in uidStart or len(uid) != 9:
-        await showPanel.finish(MessageSegment.room_at_msg(content=f"UID 是「{uid}」吗？好像不对劲呢.."+"{$@}", at_list=wxid_list))
+    if not uid.isdigit() or uid[0] not in uidStart or len(uid) != 9:
+        uid = await select_db(wxid, mode='uid')
+        if '未找到绑定的UID' in uid:
+            await showTeam.finish(MessageSegment.room_at_msg(content=f"要查询角色面板的 UID 捏？"+"{$@}", at_list=wxid_list))
 
     if not chars:
         logger.info(f"微信 {wxid} ,UID:{uid} 的输入「{raw_mes}」似乎未指定队伍角色！")
